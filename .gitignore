@@ -1,0 +1,11 @@
+frameMoE.zip
+*.tex
+*.bib
+*.bst
+*.sty
+*.pdf
+*.aux
+*.bbl
+*.blg
+*.log
+*.out

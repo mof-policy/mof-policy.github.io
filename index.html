@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mixture of Frames Policy</title>
+    <meta
+      name="description"
+      content="Anonymous CoRL 2026 Submission."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://mof-policy.github.io" />
+    <meta property="og:title" content="Mixture of Frames Policy" />
+    <meta
+      property="og:description"
+      content="Multi-frame action denoising for bimanual mobile manipulation."
+    />
+    <meta property="og:image" content="https://mof-policy.github.io/images/teaser.jpg" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+  </head>
+  <body>
+    <main>
+      <section class="hero section">
+        <div class="wrap hero-wrap">
+          <p class="eyebrow">Anonymous CoRL 2026 Submission</p>
+          <h1>Mixture of Frames Policy</h1>
+          <p class="subtitle">
+            Multi-Frame Action Denoising for Bimanual Mobile Manipulation
+          </p>
+          <figure class="figure hero-figure">
+            <img
+              src="images/teaser.jpg"
+              alt="Mixture of Frames Policy teaser showing how action representation complexity depends on coordinate frame."
+            />
+          </figure>
+          <p class="lead">
+            MoF denoises the same action trajectory through multiple coordinate
+            frames and fuses frame-specialized predictions in a shared canonical frame.
+          </p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="wrap narrow">
+          <h2>Overview</h2>
+          <p>
+            Robotic manipulation is naturally multi-frame. Local reaching can be
+            compact in an end-effector frame, while object transport, upright
+            handling, and whole-body coordination can be easier in a base-aligned
+            frame. A standard diffusion policy commits to one predefined action
+            frame, forcing a single denoiser to model distributions that may be
+            unnecessarily complex in that representation.
+          </p>
+          <p>
+            Mixture of Frames Policy (MoF) keeps a single canonical diffusion state,
+            re-expresses it in task-relevant frames, applies frame-specialized
+            denoisers, and fuses their noise predictions back in the canonical
+            frame. A column-vector 6D rotation representation enables exact,
+            differentiable frame transformations even for intermediate noisy
+            diffusion states.
+          </p>
+        </div>
+      </section>
+
+      <section class="section shaded">
+        <div class="wrap">
+          <h2>Method</h2>
+          <figure class="figure">
+            <img
+              src="images/architecture.jpg"
+              alt="MoF architecture diagram with frame transforms, frame experts, router weights, and fused noise prediction."
+            />
+            <figcaption>
+              MoF synchronizes multiple frame-specialized denoisers along one
+              canonical diffusion trajectory.
+            </figcaption>
+          </figure>
+
+          <div class="summary-grid">
+            <article>
+              <h3>Synchronized Denoising</h3>
+              <p>
+                Each denoising step transforms the canonical noisy action into
+                expert frames, predicts noise in each frame, transforms predictions
+                back, and performs one standard scheduler update.
+              </p>
+            </article>
+            <article>
+              <h3>Frame Fusion</h3>
+              <p>
+                Predictions can be fused with learned router weights or uniform
+                ensemble weights, allowing task phases to emphasize different
+                action parameterizations.
+              </p>
+            </article>
+            <article>
+              <h3>Noisy SE(3) Actions</h3>
+              <p>
+                Rotation columns transform as ordinary 3D vectors, avoiding
+                lossy orthogonalization of noisy rotation channels during frame
+                changes.
+              </p>
+            </article>
+          </div>
+
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="wrap">
+          <h2>Simulation Experiments</h2>
+          <p class="section-intro">
+            Simulations test whether action-frame choice matters, whether MoF can
+            improve over the best task-level frame selection, and which components
+            are responsible for the gain.
+          </p>
+
+          <figure class="figure">
+            <img
+              src="images/simulation-tasks.png"
+              alt="Nine simulation tasks from bimanual manipulation benchmarks."
+            />
+            <figcaption>
+              Nine simulated bimanual manipulation tasks spanning contact-rich,
+              coordinated, and whole-body behaviors.
+            </figcaption>
+          </figure>
+
+          <div class="result-band">
+            <div>
+              <span class="number">66.8%</span>
+              <span class="label">MoF-MoE average success</span>
+            </div>
+            <div>
+              <span class="number">+11.7</span>
+              <span class="label">points over MoE-DP</span>
+            </div>
+            <div>
+              <span class="number">+16.5</span>
+              <span class="label">points over standard DP</span>
+            </div>
+          </div>
+
+          <div class="figure-grid two">
+            <figure class="figure">
+              <img
+                src="images/threading-router.png"
+                alt="Router weight trajectories on the Threading task."
+              />
+              <figcaption>
+                On Threading, the router shifts from arm-centric relative
+                trajectory reasoning to shared-frame bimanual insertion.
+              </figcaption>
+            </figure>
+            <figure class="figure">
+              <img
+                src="images/router-advantage.png"
+                alt="Router modulation amplitude plotted against MoF-MoE advantage over oracle frame."
+              />
+              <figcaption>
+                Tasks with stronger within-episode routing changes show larger
+                gains over the best single-frame policy.
+              </figcaption>
+            </figure>
+          </div>
+
+          <figure class="figure">
+            <img
+              src="images/router-overview.png"
+              alt="Router weight trajectories across all nine simulation tasks with observation snapshots."
+            />
+            <figcaption>
+              Router trajectories across all tasks reveal phase-dependent frame use.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="section shaded">
+        <div class="wrap">
+          <h2>Real-World Experiments</h2>
+          <p class="section-intro">
+            Real-world experiments evaluate whether frame-specialized denoising
+            transfers to bimanual mobile manipulation outside simulation. We
+            integrate MoF-MoE with a real robot policy stack and compare it with
+            single-frame baselines over 20 rollouts per task.
+          </p>
+
+          <p class="section-intro">
+            Because the real-world data collection interface does not provide base
+            frame tracking, these experiments use three experts: left end-effector,
+            right end-effector, and relative trajectory. The tasks require switching
+            between local manipulation, bimanual coordination, and mobile transport.
+          </p>
+
+          <div class="result-band">
+            <div>
+              <span class="number">85%</span>
+              <span class="label">Pouring MoF-MoE success</span>
+            </div>
+            <div>
+              <span class="number">70%</span>
+              <span class="label">Serving MoF-MoE success</span>
+            </div>
+            <div>
+              <span class="number">20</span>
+              <span class="label">rollouts per task</span>
+            </div>
+          </div>
+
+          <div class="figure-grid">
+            <figure class="figure">
+              <img
+                src="figures/real_pouring_final.jpg"
+                alt="Pouring real-world experiment results with rollout snapshots, router weights, evaluation settings, success rates, and failure cases."
+              />
+              <figcaption>
+                Pouring: the robot picks up two cups, pours a cube from the right
+                cup into the left cup, and places both upright. MoF-MoE is trained
+                on 257 demonstrations and reaches 85% success across seen and
+                unseen cup color combinations and varied placements, compared
+                with 15%, 70%, and 5% for the left, right, and relative-trajectory
+                single-frame baselines.
+              </figcaption>
+            </figure>
+            <figure class="figure">
+              <img
+                src="figures/real_serving_final.jpg"
+                alt="Serving real-world experiment results with rollout snapshots, router weights, evaluation settings, success rates, and failure cases."
+              />
+              <figcaption>
+                Serving: the robot navigates while balancing a plate, grasps a cup,
+                and places it upright on the table. MoF-MoE is trained on 177
+                demonstrations and reaches 70% success across plate colors and
+                table distances, compared with 55%, 0%, and 60% for the left,
+                right, and relative-trajectory single-frame baselines.
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div class="wrap">
+          <p>Anonymous CoRL 2026 Submission.</p>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>
