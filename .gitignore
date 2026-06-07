@@ -1,0 +1,12 @@
+frameMoE.zip
+*.tex
+*.bib
+*.bst
+*.sty
+*.pdf
+!assets/corl-mof-policy.pdf
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
